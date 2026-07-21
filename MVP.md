@@ -14,7 +14,7 @@ Permitir que o usuário registre, visualize, edite e exclua receitas e despesas 
 
 - CRUD de receitas e despesas
 - Recorrência personalizada (pontual, por N meses ou indeterminada)
-- Categorias e tags em despesas
+- Categorias, tags e forma de pagamento em despesas (cartão, dinheiro, PIX, etc.)
 - Comentários em receitas e despesas
 - Resumo do mês atual (receitas − despesas = saldo)
 - Cadastro via Bottom Sheet
@@ -83,14 +83,15 @@ Não trocar para WatermelonDB “por precaução” — só faria sentido numa r
 
 | Regra | Detalhe |
 |-------|---------|
-| Campos obrigatórios | Nome, valor, data (ou mês), categoria |
+| Campos obrigatórios | Nome, valor, data (ou mês), categoria, forma de pagamento |
 | Recorrência | Pontual, por N meses (ex.: parcela no cartão) ou indeterminada (ex.: aluguel) |
 | Categorias | Toda despesa pertence a uma categoria |
+| Forma de pagamento | Toda despesa tem um meio: cartão, dinheiro, PIX, etc. |
 | Tags | Tags prontas + tags cadastráveis pelo usuário |
 | Comentários | Texto opcional para contextualizar o gasto |
 | Somatório | Deve existir total de despesas (no mês exibido) |
 | Exclusão | Deve ser possível deletar uma despesa |
-| Edição | Nome, valor, data, recorrência, categoria, tags e comentário editáveis |
+| Edição | Nome, valor, data, recorrência, categoria, forma de pagamento, tags e comentário editáveis |
 | Auditoria | Mesma regra de `createdAt` / `updatedAt` |
 
 ### 3.3 Datas e mês de referência
@@ -196,8 +197,10 @@ Tabelas definidas no **schema Drizzle**. Abaixo, o modelo lógico equivalente.
 
 ```
 categories 1──* expenses *──* tags
+                │         │
+                │         └── expense_tags (N:N)
                 │
-                └── expense_tags (N:N)
+payment_methods 1─┘
 
 incomes (independente)
 ```
@@ -216,6 +219,19 @@ incomes (independente)
 | updatedAt | TEXT NOT NULL | ISO-8601 |
 
 **Seeds sugeridos:** Moradia, Alimentação, Transporte, Saúde, Lazer, Educação, Outros.
+
+#### `payment_methods`
+
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| id | TEXT PK | UUID |
+| name | TEXT NOT NULL UNIQUE | Nome exibido (ex.: PIX) |
+| slug | TEXT NOT NULL UNIQUE | Identificador estável: `card`, `cash`, `pix`, `transfer`, `other` |
+| isSystem | INTEGER NOT NULL DEFAULT 0 | 1 = seed do app |
+| createdAt | TEXT NOT NULL | ISO-8601 |
+| updatedAt | TEXT NOT NULL | ISO-8601 |
+
+**Seeds sugeridos:** Cartão (`card`), Dinheiro (`cash`), PIX (`pix`), Transferência (`transfer`), Outros (`other`).
 
 #### `tags`
 
@@ -254,6 +270,7 @@ incomes (independente)
 | recurrenceType | TEXT NOT NULL | `once` \| `fixed` \| `indefinite` |
 | recurrenceMonths | INTEGER NULL | Nº de meses se `fixed`; NULL caso contrário |
 | categoryId | TEXT NOT NULL FK → categories.id | Categoria |
+| paymentMethodId | TEXT NOT NULL FK → payment_methods.id | Forma de pagamento |
 | comment | TEXT NULL | Comentário livre |
 | createdAt | TEXT NOT NULL | ISO-8601 (imutável) |
 | updatedAt | TEXT NOT NULL | ISO-8601 (atualizado em edits) |
@@ -290,6 +307,15 @@ type Tag = {
   updatedAt: string
 }
 
+type PaymentMethod = {
+  id: string
+  name: string
+  slug: 'card' | 'cash' | 'pix' | 'transfer' | 'other' | string
+  isSystem: boolean
+  createdAt: string
+  updatedAt: string
+}
+
 type Income = {
   id: string
   name: string
@@ -310,6 +336,7 @@ type Expense = {
   recurrenceType: RecurrenceType
   recurrenceMonths: number | null
   categoryId: string
+  paymentMethodId: string
   comment: string | null
   tagIds: string[]
   createdAt: string
@@ -373,13 +400,13 @@ Fluxo:
 2. Bottom Sheet abre
 3. Toggle / tabs: **Receita** | **Despesa**
 4. Campos comuns: nome, valor, data/mês, recorrência (once / fixed+N / indefinite), comentário (opcional)
-5. Campos só de despesa: categoria, tags (multi-select)
+5. Campos só de despesa: categoria, forma de pagamento, tags (multi-select)
 6. Confirmar → persiste → fecha sheet → Home atualiza
 
 ### 6.3 Edição
 
 - Toque em um item da lista abre o mesmo Bottom Sheet (modo edição) ou tela de detalhe simples.
-- Campos editáveis: nome, valor, data de início, tipo/duração da recorrência e comentário; em despesas também categoria e tags.
+- Campos editáveis: nome, valor, data de início, tipo/duração da recorrência e comentário; em despesas também categoria, forma de pagamento e tags.
 - Ao salvar: atualizar campos + `updatedAt = now()`; **nunca** alterar `createdAt`.
 - Alterar recorrência no template recalcula em quais meses o item aparece (não há linhas filhas para sincronizar).
 
@@ -388,7 +415,12 @@ Fluxo:
 - Ação de deletar no detalhe/edição (com confirmação simples).
 - Remover registro e vínculos (`expense_tags`).
 
-### 6.5 Tags (MVP mínimo)
+### 6.5 Forma de pagamento (MVP mínimo)
+
+- Seletor obrigatório no formulário de despesa (seeds: Cartão, Dinheiro, PIX, Transferência, Outros).
+- Pós-MVP: cadastrar novos meios de pagamento pelo usuário, se necessário.
+
+### 6.6 Tags (MVP mínimo)
 
 - Seleção de tags existentes no formulário de despesa.
 - Opção “criar nova tag” inline (nome único).
@@ -416,9 +448,10 @@ Contratos da camada de dados (independentes de pasta/arquivo). A implementação
 - `listByMonth(yearMonth)` → Expense[]
 - `sumByMonth(yearMonth)` → number (cents)
 
-### `categoryRepository` / `tagRepository`
+### `categoryRepository` / `tagRepository` / `paymentMethodRepository`
 
-- `list()` / `create(name)` (tags e, se necessário, categorias custom)
+- `list()` — categorias, tags e formas de pagamento
+- `create(name)` — tags e, se necessário, categorias custom (formas de pagamento: só seeds no MVP)
 
 ### Consulta de resumo
 
@@ -457,6 +490,7 @@ A regra fina (`once` / `fixed` / `indefinite`) fica em helper de domínio (`isAc
 | recurrenceType | `once`, `fixed` ou `indefinite` |
 | recurrenceMonths | Obrigatório se `fixed`: inteiro entre 2 e 120; deve ser `null` se `once` ou `indefinite` |
 | categoryId (despesa) | Obrigatório, deve existir |
+| paymentMethodId (despesa) | Obrigatório, deve existir |
 | tags | 0..N; IDs válidos |
 | comment | Opcional, até 500 chars |
 
@@ -493,7 +527,7 @@ No boot do app (provider / root layout):
 1. Abrir SQLite (`expo-sqlite`)
 2. Instanciar o client Drizzle
 3. Aplicar migrations pendentes (Drizzle migrator / `drizzle-kit`)
-4. Seed de categories/tags se tabela vazia
+4. Seed de categories / tags / payment_methods se tabelas vazias
 5. Só então renderizar a Home
 
 Evitar race: a Home não consulta o banco antes do DB estar pronto.
@@ -505,7 +539,7 @@ Evitar race: a Home não consulta o banco antes do DB estar pronto.
 ## 11. Critérios de aceite do MVP
 
 - [ ] Usuário cria receita pontual, por N meses ou indeterminada, com comentário opcional
-- [ ] Usuário cria despesa pontual, por N meses ou indeterminada, com categoria, tags e comentário opcional
+- [ ] Usuário cria despesa pontual, por N meses ou indeterminada, com categoria, forma de pagamento, tags e comentário opcional
 - [ ] Parcela `fixed` de 3 meses aparece só nos 3 meses a partir do início
 - [ ] Lançamento `indefinite` aparece em todo mês ≥ início
 - [ ] Home mostra mês atual com totais de receitas, despesas e saldo
@@ -527,7 +561,7 @@ Evitar race: a Home não consulta o banco antes do DB estar pronto.
 3. Helper de recorrência (`isActiveInMonth`)
 4. Home com resumo do mês + lista (via ViewModel quando MVVM estiver definido)
 5. Bottom Sheet + formulário de receita (recorrência + comentário)
-6. Formulário de despesa (categoria, tags, comentário + recorrência)
+6. Formulário de despesa (categoria, forma de pagamento, tags, comentário + recorrência)
 7. Edição e exclusão
 8. Polimento visual alinhado ao DT Money
 9. TODO §5: documentar pastas MVVM + camada de dados estilo back-end
@@ -564,6 +598,7 @@ Evitar race: a Home não consulta o banco antes do DB estar pronto.
 | MVVM | Padrão View / ViewModel / Model (organização: TODO §5) |
 | Drizzle | ORM leve sobre SQLite: schema tipado e migrations |
 | Saldo | Receitas − Despesas no período |
+| Forma de pagamento | Meio usado na despesa: cartão, dinheiro, PIX, transferência, etc. |
 | Tag | Rótulo livre/adicional à categoria, para filtrar/contextualizar |
 
 ---
