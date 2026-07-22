@@ -6,10 +6,11 @@ import {
   startOfMonth,
 } from 'date-fns'
 
-type RecurrenceEntry = Omit<
-  Income,
-  'id' | 'name' | 'amountCents' | 'comment' | 'createdAt' | 'updatedAt'
->
+type RecurrenceEntry = {
+  occurredOn: string
+  recurrenceType: RecurrenceType
+  recurrenceMonths: number | null
+}
 
 export function isActiveInMonth(
   entry: RecurrenceEntry,
