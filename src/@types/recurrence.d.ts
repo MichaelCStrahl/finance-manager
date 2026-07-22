@@ -1,0 +1,1 @@
+type RecurrenceType = 'once' | 'fixed' | 'indefinite'
