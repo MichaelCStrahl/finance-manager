@@ -1,22 +1,67 @@
+import { isActiveInMonth } from '@/src/domain/is-active-in-month'
 import { IncomesRepository } from '@/src/application/repositories/incomes-repository'
-import { CreateIncomeUseCaseRequest } from '@/src/application/use-cases/create-income'
 
-export class InMemoryIncomesRepository
-  implements IncomesRepository {
+export class InMemoryIncomesRepository implements IncomesRepository {
   public items: Income[] = []
 
-  async create(income: CreateIncomeUseCaseRequest): Promise<Income> {
+  async create(income: CreateIncomeData): Promise<Income> {
+    const now = new Date().toISOString()
+
     const newIncome: Income = {
-      id: '1',
+      id: crypto.randomUUID(),
       ...income,
-      comment: income.comment ?? null,
       recurrenceMonths: income.recurrenceMonths ?? null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      comment: income.comment ?? null,
+      createdAt: now,
+      updatedAt: now,
     }
 
     this.items.push(newIncome)
 
     return newIncome
+  }
+
+  async update(id: string, income: UpdateIncomeData): Promise<Income> {
+    const now = new Date().toISOString()
+
+    const index = this.items.findIndex((item) => item.id === id)
+
+    if (index < 0) {
+      throw new Error('Income not found.')
+    }
+
+    const current = this.items[index]
+
+    const updated: Income = {
+      ...current,
+      ...income,
+      recurrenceMonths: income.recurrenceMonths ?? current.recurrenceMonths,
+      comment: income.comment ?? current.comment,
+      updatedAt: now,
+    }
+
+    this.items[index] = updated
+
+    return updated
+  }
+
+  async delete(id: string): Promise<void> {
+    const index = this.items.findIndex((item) => item.id === id)
+
+    if (index < 0) {
+      throw new Error('Income not found.')
+    }
+
+    this.items.splice(index, 1)
+  }
+
+  async listByMonth(yearMonth: string): Promise<Income[]> {
+    return this.items.filter((income) => isActiveInMonth(income, yearMonth))
+  }
+
+  async sumByMonth(yearMonth: string): Promise<number> {
+    const incomes = await this.listByMonth(yearMonth)
+
+    return incomes.reduce((total, income) => total + income.amountCents, 0)
   }
 }

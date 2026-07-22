@@ -1,5 +1,5 @@
-import { InMemoryIncomesRepository } from "@/test/repositories/in-memory-incomes-repository"
 import { CreateIncomeUseCase } from "@/src/application/use-cases/create-income"
+import { InMemoryIncomesRepository } from "@/test/repositories/in-memory-incomes-repository"
 
 
 let inMemoryIncomesRepository: InMemoryIncomesRepository

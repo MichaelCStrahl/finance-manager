@@ -1,6 +1,7 @@
 import { IncomesRepository } from '@/src/application/repositories/incomes-repository'
 
-export interface CreateIncomeUseCaseRequest {
+export interface UpdateIncomeUseCaseRequest {
+  id: string
   name: string
   amountCents: number
   occurredOn: string
@@ -9,22 +10,23 @@ export interface CreateIncomeUseCaseRequest {
   comment?: string | null
 }
 
-export interface CreateIncomeUseCaseResponse {
+export interface UpdateIncomeUseCaseResponse {
   income: Income
 }
 
-export class CreateIncomeUseCase {
+export class UpdateIncomeUseCase {
   constructor(private incomesRepository: IncomesRepository) {}
 
   async execute({
+    id,
     name,
     amountCents,
     occurredOn,
     recurrenceType,
     recurrenceMonths,
     comment,
-  }: CreateIncomeUseCaseRequest): Promise<CreateIncomeUseCaseResponse> {
-    const income = await this.incomesRepository.create({
+  }: UpdateIncomeUseCaseRequest): Promise<UpdateIncomeUseCaseResponse> {
+    const income = await this.incomesRepository.update(id, {
       name,
       amountCents,
       occurredOn,
