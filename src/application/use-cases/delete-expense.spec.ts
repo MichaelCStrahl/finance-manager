@@ -24,4 +24,10 @@ describe('Delete Expense Use Case', () => {
 
     expect(inMemoryExpensesRepository.items).toHaveLength(0)
   })
+
+  it('should not be able to delete a expense that does not exist', async () => {
+    await expect(
+      sut.execute({ id: 'non-existing-id' }),
+    ).rejects.toThrow('Expense not found')
+  })
 })

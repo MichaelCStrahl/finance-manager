@@ -15,7 +15,7 @@ export interface UpdateIncomeUseCaseResponse {
 }
 
 export class UpdateIncomeUseCase {
-  constructor(private incomesRepository: IncomesRepository) {}
+  constructor(private incomesRepository: IncomesRepository) { }
 
   async execute({
     id,
@@ -26,6 +26,12 @@ export class UpdateIncomeUseCase {
     recurrenceMonths,
     comment,
   }: UpdateIncomeUseCaseRequest): Promise<UpdateIncomeUseCaseResponse> {
+    const existingIncome = await this.incomesRepository.findById(id)
+
+    if (!existingIncome) {
+      throw new Error('Income not found')
+    }
+
     const income = await this.incomesRepository.update(id, {
       name,
       amountCents,

@@ -35,4 +35,20 @@ describe('Create Income Use Case', () => {
       }),
     )
   })
+
+  it('should apply default optional fields when omitted', async () => {
+    const result = await sut.execute({
+      name: 'Freela',
+      amountCents: 500,
+      occurredOn: '2026-07-01',
+      recurrenceType: 'once',
+    })
+
+    expect(result.income).toEqual(
+      expect.objectContaining({
+        recurrenceMonths: null,
+        comment: null,
+      }),
+    )
+  })
 })

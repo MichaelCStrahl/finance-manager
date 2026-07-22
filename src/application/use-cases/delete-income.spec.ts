@@ -22,4 +22,10 @@ describe('Delete Income Use Case', () => {
 
     expect(inMemoryIncomesRepository.items).toHaveLength(0)
   })
+
+  it('should not be able to delete a income that does not exist', async () => {
+    await expect(
+      sut.execute({ id: 'non-existing-id' }),
+    ).rejects.toThrow('Income not found')
+  })
 })

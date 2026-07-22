@@ -21,6 +21,8 @@ describe('Update Expense Use Case', () => {
       tagIds: [],
     })
 
+    inMemoryExpensesRepository.items[0].updatedAt = '2020-01-01T00:00:00.000Z'
+
     const result = await sut.execute({
       id: created.id,
       name: 'Aluguel atualizado',
@@ -50,5 +52,23 @@ describe('Update Expense Use Case', () => {
       }),
     )
     expect(result.expense.createdAt).toBe(created.createdAt)
+    expect(result.expense.updatedAt).not.toBe('2020-01-01T00:00:00.000Z')
+  })
+
+  it('should not be able to update a expense that does not exist', async () => {
+    await expect(
+      sut.execute({
+        id: 'non-existing-id',
+        name: 'Aluguel atualizado',
+        amountCents: 160000,
+        occurredOn: '2026-02-01',
+        recurrenceType: 'fixed',
+        recurrenceMonths: 3,
+        categoryId: 'category-2',
+        paymentMethodId: 'payment-2',
+        comment: 'Reajuste',
+        tagIds: ['tag-1'],
+      }),
+    ).rejects.toThrow('Expense not found')
   })
 })

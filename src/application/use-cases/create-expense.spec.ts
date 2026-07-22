@@ -40,4 +40,23 @@ describe('Create Expense Use Case', () => {
       }),
     )
   })
+
+  it('should apply default optional fields when omitted', async () => {
+    const result = await sut.execute({
+      name: 'Uber',
+      amountCents: 5000,
+      occurredOn: '2026-07-01',
+      recurrenceType: 'once',
+      categoryId: 'category-1',
+      paymentMethodId: 'payment-1',
+    })
+
+    expect(result.expense).toEqual(
+      expect.objectContaining({
+        recurrenceMonths: null,
+        comment: null,
+        tagIds: [],
+      }),
+    )
+  })
 })

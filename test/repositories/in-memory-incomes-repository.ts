@@ -45,6 +45,10 @@ export class InMemoryIncomesRepository implements IncomesRepository {
     return updated
   }
 
+  async findById(id: string): Promise<Income | null> {
+    return this.items.find((item) => item.id === id) ?? null
+  }
+
   async delete(id: string): Promise<void> {
     const index = this.items.findIndex((item) => item.id === id)
 

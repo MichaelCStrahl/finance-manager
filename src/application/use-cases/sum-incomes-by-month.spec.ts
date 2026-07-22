@@ -25,6 +25,12 @@ describe('Sum Incomes By Month Use Case', () => {
       recurrenceType: 'indefinite',
     })
 
+    const result = await sut.execute({ yearMonth: '2026-07' })
+
+    expect(result.totalCents).toBe(1500)
+  })
+
+  it('should return zero when there are no incomes in the month', async () => {
     await inMemoryIncomesRepository.create({
       name: 'Outro mês',
       amountCents: 200,
@@ -34,6 +40,6 @@ describe('Sum Incomes By Month Use Case', () => {
 
     const result = await sut.execute({ yearMonth: '2026-07' })
 
-    expect(result.totalCents).toBe(1500)
+    expect(result.totalCents).toBe(0)
   })
 })

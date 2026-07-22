@@ -18,7 +18,7 @@ export interface UpdateExpenseUseCaseResponse {
 }
 
 export class UpdateExpenseUseCase {
-  constructor(private expensesRepository: ExpensesRepository) {}
+  constructor(private expensesRepository: ExpensesRepository) { }
 
   async execute({
     id,
@@ -35,6 +35,12 @@ export class UpdateExpenseUseCase {
     // TODO: validar se categoryId existe (categoryRepository)
     // TODO: validar se paymentMethodId existe (paymentMethodRepository)
     // TODO: validar se tagIds existem (tagRepository)
+
+    const existingExpense = await this.expensesRepository.findById(id)
+
+    if (!existingExpense) {
+      throw new Error('Expense not found')
+    }
 
     const expense = await this.expensesRepository.update(id, {
       name,

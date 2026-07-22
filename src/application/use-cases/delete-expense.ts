@@ -5,9 +5,15 @@ export interface DeleteExpenseUseCaseRequest {
 }
 
 export class DeleteExpenseUseCase {
-  constructor(private expensesRepository: ExpensesRepository) {}
+  constructor(private expensesRepository: ExpensesRepository) { }
 
   async execute({ id }: DeleteExpenseUseCaseRequest): Promise<void> {
+    const existingExpense = await this.expensesRepository.findById(id)
+
+    if (!existingExpense) {
+      throw new Error('Expense not found')
+    }
+
     await this.expensesRepository.delete(id)
   }
 }

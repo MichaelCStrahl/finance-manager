@@ -47,6 +47,10 @@ export class InMemoryExpensesRepository implements ExpensesRepository {
     return updated
   }
 
+  async findById(id: string): Promise<Expense | null> {
+    return this.items.find((item) => item.id === id) ?? null
+  }
+
   async delete(id: string): Promise<void> {
     const index = this.items.findIndex((item) => item.id === id)
 

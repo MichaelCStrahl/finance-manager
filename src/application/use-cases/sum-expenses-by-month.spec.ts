@@ -29,6 +29,12 @@ describe('Sum Expenses By Month Use Case', () => {
       paymentMethodId: 'payment-1',
     })
 
+    const result = await sut.execute({ yearMonth: '2026-07' })
+
+    expect(result.totalCents).toBe(155000)
+  })
+
+  it('should return zero when there are no expenses in the month', async () => {
     await inMemoryExpensesRepository.create({
       name: 'Outro mês',
       amountCents: 2000,
@@ -40,6 +46,6 @@ describe('Sum Expenses By Month Use Case', () => {
 
     const result = await sut.execute({ yearMonth: '2026-07' })
 
-    expect(result.totalCents).toBe(155000)
+    expect(result.totalCents).toBe(0)
   })
 })
